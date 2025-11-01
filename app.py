@@ -2,23 +2,20 @@ import streamlit as st
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-import os
 import warnings
 import numpy as np
+import io
+import requests
 
+# --------------------------------------------------------
+# BASIC SETUP
+# --------------------------------------------------------
 warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
 sns.set_theme(style="whitegrid")
 
-# Set wide layout
 st.set_page_config(page_title="Data Analysis App", layout="wide")
 
-# ----------------------------
-# Path for uploaded CSV
-# ----------------------------
-app_data_folder = "app_data"
-os.makedirs(app_data_folder, exist_ok=True)
-
-# Sidebar for navigation
+# Sidebar navigation
 st.sidebar.title("Navigation")
 page = st.sidebar.radio(
     "Select Page:",
@@ -26,111 +23,95 @@ page = st.sidebar.radio(
     key="navigation"
 )
 
-# ----------------------------------------------------------------
+# --------------------------------------------------------
+# CONSTANT LINKS (YOUR GOOGLE DRIVE FILES)
+# --------------------------------------------------------
+
+# 🎥 Video link (Google Drive preview link)
+VIDEO_EMBED_LINK = "https://drive.google.com/file/d/1OlRcOU6Pl8e7JqZIxvGdbufq7_CH9cZe/preview"
+
+# 📊 CSV link (Google Drive share link)
+CSV_SHARE_LINK = "https://drive.google.com/file/d/1FCsUhG-G0nUnQOfBuAb5mzXolv-UnCc4/view?usp=sharing"
+
+# Convert shared link to direct download link
+CSV_FILE_ID = CSV_SHARE_LINK.split("/d/")[1].split("/")[0]
+CSV_DIRECT_LINK = f"https://drive.google.com/uc?export=download&id={CSV_FILE_ID}"
+
+# --------------------------------------------------------
+# FUNCTION TO LOAD DATA FROM GOOGLE DRIVE
+# --------------------------------------------------------
+@st.cache_data
+def load_data_from_drive(url):
+    try:
+        response = requests.get(url)
+        if response.status_code == 200:
+            return pd.read_csv(io.StringIO(response.text))
+        else:
+            st.error("⚠️ Failed to load dataset from Google Drive. Please check the sharing permissions.")
+            return None
+    except Exception as e:
+        st.error(f"❌ Error loading data: {e}")
+        return None
+
+# --------------------------------------------------------
 # WELCOME PAGE
-# ----------------------------------------------------------------
+# --------------------------------------------------------
 if page == "Welcome":
-    st.title("Welcome to the Data Analysis Application 🎉")
+    st.title("🎬 Welcome to the Data Analysis Application 🎉")
 
     st.write(
         """
-        This application is designed for dynamic data visualization and analysis using your uploaded dataset. It supports:
+        This application is designed for **dynamic data visualization and analysis** using a dataset 
+        hosted on **Google Drive** — no upload needed!
 
-        - **Univariate Analysis:** Single-variable exploration.
-        - **Bivariate Analysis:** Explore relationships between two variables.
-        - **Multivariate Analysis:** Advanced insights involving multiple variables.
+        ### 📊 What you can explore:
+        - **Univariate Analysis:** Single-variable exploration  
+        - **Bivariate Analysis:** Relationships between two variables  
+        - **Multivariate Analysis:** Correlations across multiple dimensions  
 
-        ### Features include:
-        - Interactive visualizations.
-        - Seamless data upload and processing.
-        - Advanced plots with custom options.
-
-        Navigate through the sidebar options to begin your journey! 📊
+        ### ⚙️ Features:
+        - Automatic data loading from Google Drive  
+        - Interactive visualizations with Seaborn & Matplotlib  
+        - Instant, browser-based analysis  
         """
     )
 
-    # ---------------------------
-    # CSV Download Link
-    # ---------------------------
+    # 🎥 Video Section
     st.markdown("---")
-    st.header("📥 Download Sample Dataset")
+    st.header("🎥 Exploratory Data Analysis Video")
 
-    # Check for CSV files in the app_data folder
-    csv_files = [f for f in os.listdir(app_data_folder) if f.lower().endswith(".csv")]
+    drive_video_embed = f"""
+    <div style="display: flex; justify-content: center; margin-top: 20px;">
+        <iframe src="{VIDEO_EMBED_LINK}" width="900" height="500" allow="autoplay"></iframe>
+    </div>
+    """
+    st.markdown(drive_video_embed, unsafe_allow_html=True)
 
-    if csv_files:
-        csv_path = os.path.join(app_data_folder, csv_files[0])  # take the first CSV
-        with open(csv_path, "rb") as f:
-            csv_bytes = f.read()
-        st.download_button(
-            label="Download CSV",
-            data=csv_bytes,
-            file_name=csv_files[0],
-            mime='text/csv'
-        )
-    else:
-        st.info("No CSV file found in the `app_data/` folder. Upload a CSV to enable download.")
+    # 📊 Dataset Section
+    st.markdown("---")
+    st.header("📂 Dataset Used for Analysis")
+
+    st.success("✅ The dataset is automatically loaded from Google Drive (no upload needed).")
+
+    st.markdown(f"[Click here to open dataset in Google Drive]({CSV_SHARE_LINK})")
 
     st.markdown("---")
-    st.header("🎥 Exploratory Data Analysis Video on the sample Dataset")
+    st.markdown(
+        "<p style='text-align:center; color:gray;'>Developed for Amazon Prime Video EDA Project 📊</p>",
+        unsafe_allow_html=True
+    )
 
-    # Folder where videos are stored
-    video_folder = "videos"
-    os.makedirs(video_folder, exist_ok=True)
-
-    # Get all video files in the folder
-    video_files = [
-        f for f in os.listdir(video_folder)
-        if f.lower().endswith((".mp4", ".mov", ".avi", ".mkv"))
-    ]
-
-    if video_files:
-        # Apply styling for YouTube-like frame
-        st.markdown(
-            """
-            <style>
-            .stVideo > video {
-                width: 1280px !important;
-                height: 720px !important;
-                display: block;
-                margin-left: auto;
-                margin-right: auto;
-                border-radius: 12px;
-                box-shadow: 0px 4px 25px rgba(0,0,0,0.4);
-                object-fit: cover;
-            }
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
-
-        for vid in video_files:
-            st.subheader(f"▶️ {vid}")
-            video_path = os.path.join(video_folder, vid)
-            with open(video_path, "rb") as f:
-                video_bytes = f.read()
-            st.video(video_bytes, format="video/mp4", start_time=0)
-    else:
-        st.info("🎬 No videos found in the `videos/` folder. Add `.mp4` files to display them here.")
-
-# ----------------------------------------------------------------
-# OTHER PAGES (Require CSV)
-# ----------------------------------------------------------------
+# --------------------------------------------------------
+# OTHER PAGES (Auto-load CSV)
+# --------------------------------------------------------
 else:
-    st.sidebar.title("Upload Dataset")
-    uploaded_file = st.sidebar.file_uploader("Upload your CSV file here", type=["csv"], key="uploader")
+    st.sidebar.info("Loading dataset from Google Drive...")
+    data = load_data_from_drive(CSV_DIRECT_LINK)
 
-    if uploaded_file:
-        # Save uploaded CSV to app_data folder
-        save_path = os.path.join(app_data_folder, uploaded_file.name)
-        with open(save_path, "wb") as f:
-            f.write(uploaded_file.getbuffer())
-
-        data = pd.read_csv(save_path)
-        st.sidebar.success(f"✅ Dataset '{uploaded_file.name}' Loaded Successfully!")
-    else:
-        st.sidebar.info("Please upload a dataset to proceed.")
+    if data is None:
         st.stop()
+    else:
+        st.sidebar.success("✅ Dataset Loaded Successfully from Google Drive!")
 
     numeric_columns = data.select_dtypes(include="number").columns.tolist()
     categorical_columns = data.select_dtypes(include="object").columns.tolist()
@@ -138,11 +119,11 @@ else:
     def display_plot(fig):
         st.pyplot(fig)
 
-# ----------------------------------------------------------------
+# --------------------------------------------------------
 # UNIVARIATE ANALYSIS
-# ----------------------------------------------------------------
+# --------------------------------------------------------
     if page == "Univariate Analysis":
-        st.title("Univariate Analysis")
+        st.title("📊 Univariate Analysis")
         st.header("Explore Single-Variable Trends")
 
         fig, axes = plt.subplots(2, 2, figsize=(22, 13))
@@ -170,11 +151,11 @@ else:
         plt.tight_layout()
         display_plot(fig)
 
-# ----------------------------------------------------------------
+# --------------------------------------------------------
 # BIVARIATE ANALYSIS
-# ----------------------------------------------------------------
+# --------------------------------------------------------
     elif page == "Bivariate Analysis":
-        st.title("Bivariate Analysis")
+        st.title("🔗 Bivariate Analysis")
         st.header("Explore Relationships Between Two Variables")
 
         fig, axes = plt.subplots(2, 2, figsize=(22, 13))
@@ -204,11 +185,11 @@ else:
         plt.tight_layout()
         display_plot(fig)
 
-# ----------------------------------------------------------------
+# --------------------------------------------------------
 # MULTIVARIATE ANALYSIS
-# ----------------------------------------------------------------
+# --------------------------------------------------------
     elif page == "Multivariate Analysis":
-        st.title("Multivariate Analysis")
+        st.title("🌐 Multivariate Analysis")
         st.header("Discover Patterns Across Multiple Variables")
 
         st.subheader("Pairplot")
@@ -221,7 +202,6 @@ else:
             else:
                 st.warning("Please select at least one column for the Pairplot.")
         else:
-            
             st.error("No numeric columns available for Pairplot.")
 
         st.subheader("Heatmap")
