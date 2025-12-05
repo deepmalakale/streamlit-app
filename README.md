@@ -1,4 +1,4 @@
-Streamlit App on EDA of Amazon Prime TV Shows and Movies
+Streamlit App on EDA of Amazon Prime TV Shows and Movies    https://app-eda-amazon-prime.streamlit.app/
 # 🎬 Amazon Prime Video — Exploratory Data Analysis (EDA)
 
 This project performs **Exploratory Data Analysis (EDA)** on the **Amazon Prime Video dataset**, revealing key insights into its movies and TV shows catalog.  
